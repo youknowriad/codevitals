@@ -4,28 +4,18 @@ import { PSDB } from 'planetscale-node'
 const conn = new PSDB('main')
 
 export default async (req, res) => {
-  const {
-    body: { email, name, password },
-    method
-  } = req
+  const { method } = req
   switch (method) {
-    case 'POST':
-      const [rows, fields] = await conn.query(
-        `insert into users (email, name, password) values ('${email}', '${name}', '${password}')`
-      )
-      res.statusCode = 201
-      res.json({ email, name })
-      break
     case 'GET':
       try {
-        const [getRows, _] = await conn.query('select * from users')
+        const [getRows, _] = await conn.query('select * from perf')
         res.statusCode = 200
         res.json(getRows)
       } catch (e) {
-        error = new Error('An error occurred while connecting to the database')
+        const error = new Error('An error occurred while connecting to the database')
         error.status = 500
         error.info = { message: 'An error occurred while connecting to the database' }
-        throw error
+        throw e
       }
 
       break
