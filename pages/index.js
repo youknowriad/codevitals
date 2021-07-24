@@ -15,14 +15,17 @@ export default function Home() {
           <table className='table-auto'>
             <thead>
               <tr>
-                <th className='w-4/12' scope='col'>
+                <th className='w-3/12' scope='col'>
                   Metric ID
                 </th>
-                <th className='w-4/12' scope='col'>
+                <th className='w-3/12' scope='col'>
                   Value
                 </th>
-                <th className='w-4/12' scope='col'>
+                <th className='w-3/12' scope='col'>
                   Branch
+                </th>
+                <th className='w-3/12' scope='col'>
+                  Hash
                 </th>
               </tr>
             </thead>
@@ -32,6 +35,7 @@ export default function Home() {
                   <td>{perfValue.metric_id}</td>
                   <td>{perfValue.value}</td>
                   <td>{perfValue.branch}</td>
+                  <td>{perfValue.hash}</td>
                 </tr>
               ))}
             </tbody>
