@@ -1,10 +1,3 @@
-const navigation = [
-  { name: 'Solutions', href: '#' },
-  { name: 'Pricing', href: '#' },
-  { name: 'Docs', href: '#' },
-  { name: 'Company', href: '#' }
-]
-
 export default function Header({ children }) {
   return (
     <header className='bg-indigo-600'>

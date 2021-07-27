@@ -19,7 +19,8 @@ function Metric({ metric }) {
               datasets: [
                 {
                   label: metric.name,
-                  data: perf.map((p) => p.value)
+                  data: perf.map((p) => p.value),
+                  cubicInterpolationMode: 'monotone'
                 }
               ]
             }}
