@@ -1,6 +1,8 @@
 import useSWR from 'swr'
 import { Line } from 'react-chartjs-2'
 import { useState } from 'react'
+import Header from '../components/header'
+import MetricSwitcher from '../components/metric-switcher'
 
 const fetcher = (url) => fetch(url).then((res) => res.json())
 
@@ -8,7 +10,7 @@ function Metric({ metric }) {
   const { data: perf } = useSWR('/api/perf/' + metric.id, fetcher)
 
   return (
-    <div className='w-full'>
+    <div className='m-10'>
       {perf?.length > 0 && (
         <>
           <Line
@@ -17,39 +19,19 @@ function Metric({ metric }) {
               datasets: [
                 {
                   label: metric.name,
-                  data: perf.map(p => p.value)
+                  data: perf.map((p) => p.value)
                 }
               ]
             }}
+            options={{
+              responsive: true,
+              scales: {
+                x: {
+                  display: false
+                }
+              }
+            }}
           />
-          <table className='table-auto'>
-            <thead>
-              <tr>
-                <th className='w-3/12' scope='col'>
-                  Metric ID
-                </th>
-                <th className='w-3/12' scope='col'>
-                  Value
-                </th>
-                <th className='w-3/12' scope='col'>
-                  Branch
-                </th>
-                <th className='w-3/12' scope='col'>
-                  Hash
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {perf.map((perfValue) => (
-                <tr key={perfValue.id}>
-                  <td>{perfValue.metric_id}</td>
-                  <td>{perfValue.value}</td>
-                  <td>{perfValue.branch}</td>
-                  <td>{perfValue.hash}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </>
       )}
     </div>
@@ -58,32 +40,23 @@ function Metric({ metric }) {
 
 export default function Home() {
   const { data: metrics } = useSWR('/api/metrics', fetcher)
-  const [selectedMetricId, setSelectedMetricId] = useState()
-  const selectedMetric = selectedMetricId ? metrics.find((metric) => metric.id === selectedMetricId) : metrics?.[0]
+  const [selectedMetric, setSelectedMetric] = useState()
+  const displayedMetric = selectedMetric || metrics?.[0]
 
   return (
-    <div className='min-h-screen px-4 py-12 sm:px-6 lg:px-8'>
-      <h1>Is Gutenberg Fast Yet?</h1>
-
-      {!metrics && <div className='w-full h-full flex flex-col items-center justify-center text-lg'>Loading...</div>}
-      {metrics && !metrics.length && (
-        <div className='w-full h-full flex flex-col items-center justify-center text-lg'>No data available.</div>
-      )}
-      {metrics && metrics.length && (
-        <>
-          <label>
-            Select a metric
-            <select value={selectedMetricId} onChange={(e) => setSelectedMetricId(parseInt(e.target.value, 10))}>
-              {metrics.map(({ id, name }) => (
-                <option key={id} value={id}>
-                  {name}
-                </option>
-              ))}
-            </select>
-          </label>
-          {selectedMetric && <Metric metric={selectedMetric} />}
-        </>
-      )}
-    </div>
+    <>
+      <Header>
+        {metrics && metrics.length && (
+          <MetricSwitcher metrics={metrics} value={displayedMetric} onChange={setSelectedMetric} />
+        )}
+      </Header>
+      <div>
+        {!metrics && <div className='w-full h-full flex flex-col items-center justify-center text-lg'>Loading...</div>}
+        {metrics && !metrics.length && (
+          <div className='w-full h-full flex flex-col items-center justify-center text-lg'>No data available.</div>
+        )}
+        {displayedMetric && <Metric metric={displayedMetric || metrics?.[0]} />}
+      </div>
+    </>
   )
 }
