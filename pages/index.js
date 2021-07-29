@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { ArrowSmDownIcon, ArrowSmUpIcon, InformationCircleIcon } from '@heroicons/react/solid'
 import Header from '../components/header'
 
-const formatNumber = (number) => number.toLocaleString(undefined, { minimumFractionDigits: 2 })
+const formatNumber = (number) => number.toLocaleString(undefined, { maximumFractionDigits: 2 })
 const fetcher = (url) => fetch(url).then((res) => res.json())
 
 function Metric({ metric }) {
@@ -136,8 +136,8 @@ export default function Home() {
               </div>
               <div className='ml-3 flex-1 md:flex md:justify-between'>
                 <p className='text-sm text-blue-700'>
-                  For more stability, the following numbers compare the evolution of the metrics by computing average of 20
-                  sequential values.
+                  For more stability, the following numbers compare the evolution of the metrics by computing average of
+                  20 sequential values.
                 </p>
               </div>
             </div>
