@@ -4,13 +4,21 @@ import { PSDB } from 'planetscale-node'
 const conn = new PSDB('main')
 
 export default async (req, res) => {
-  const { method } = req
+  const {
+    method,
+    query: { token }
+  } = req
+  console.log('token', token);
   switch (method) {
     case 'POST':
       try {
         const { metrics, hash, timestamp, branch, baseMetrics, baseHash } = req.body
-        const [availableMetrics] = await conn.query('select * from metric')
-        const [[{ c: count }]] = await conn.query('select count(*) as c from perf')
+        const [[project]] = await conn.query('select id from project where token = ?', token)
+        if (!project) {
+          throw 'Invalid token'
+        }
+        const [availableMetrics] = await conn.query('select * from metric where where project_id = ?', project.id)
+        const [[{ c: count }]] = await conn.query('select count(*) as c from perf where project_id = ?', project.id)
 
         // No base yet, fill base values.
         if (count === 0) {
@@ -18,17 +26,23 @@ export default async (req, res) => {
           Object.entries(baseMetrics).forEach(([metricKey, metricValue]) => {
             const availableMetric = availableMetrics.find((m) => m.key === metricKey)
             if (availableMetric) {
-              baseTuples.push([baseHash, baseHash, availableMetric.id, metricValue, new Date(timestamp)])
+              baseTuples.push([project.id, baseHash, baseHash, availableMetric.id, metricValue, new Date(timestamp)])
             }
           })
 
           for (const tuple of baseTuples) {
-            await conn.query('insert into perf (branch, hash, metric_id, value, measured_at) values (?,?,?,?,?)', tuple)
+            await conn.query(
+              'insert into perf (project_id, branch, hash, metric_id, value, measured_at) values (?, ?,?,?,?,?)',
+              tuple
+            )
           }
         }
 
         // Insert and normalize metrics
-        const [basePerfs] = await conn.query('select * from perf where hash = ?', [baseHash])
+        const [basePerfs] = await conn.query('select * from perf where hash = ? and project_id = ?', [
+          baseHash,
+          project.id
+        ])
         const tuples = []
         Object.entries(metrics).forEach(([metricKey, metricValue]) => {
           const availableMetric = availableMetrics.find((m) => m.key === metricKey)
@@ -36,6 +50,7 @@ export default async (req, res) => {
 
           if (availableMetric && baseValue) {
             tuples.push([
+              project.id,
               branch,
               hash,
               availableMetric.id,
@@ -46,7 +61,10 @@ export default async (req, res) => {
         })
 
         for (const tuple of tuples) {
-          await conn.query('insert into perf (branch, hash, metric_id, value, measured_at) values (?,?,?,?,?)', tuple)
+          await conn.query(
+            'insert into perf (project_id, branch, hash, metric_id, value, measured_at) values (?, ?,?,?,?,?)',
+            tuple
+          )
         }
         res.statusCode = 200
         res.json({ status: 'ok', count: tuples.length })
