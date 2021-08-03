@@ -8,7 +8,6 @@ export default async (req, res) => {
     method,
     query: { token }
   } = req
-  console.log('token', token);
   switch (method) {
     case 'POST':
       try {
@@ -17,7 +16,7 @@ export default async (req, res) => {
         if (!project) {
           throw 'Invalid token'
         }
-        const [availableMetrics] = await conn.query('select * from metric where where project_id = ?', project.id)
+        const [availableMetrics] = await conn.query('select * from metric where project_id = ?', project.id)
         const [[{ c: count }]] = await conn.query('select count(*) as c from perf where project_id = ?', project.id)
 
         // No base yet, fill base values.
@@ -62,7 +61,7 @@ export default async (req, res) => {
 
         for (const tuple of tuples) {
           await conn.query(
-            'insert into perf (project_id, branch, hash, metric_id, value, measured_at) values (?, ?,?,?,?,?)',
+            'insert into perf (project_id, branch, hash, metric_id, value, measured_at) values (?,?,?,?,?,?)',
             tuple
           )
         }
