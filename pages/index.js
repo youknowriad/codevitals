@@ -31,6 +31,9 @@ function Metric({ metric }) {
               scales: {
                 x: {
                   display: false
+                },
+                y: {
+                  min: 0
                 }
               }
             }}
