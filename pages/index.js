@@ -7,37 +7,96 @@ import Header from '../components/header'
 
 const formatNumber = (number) => number.toLocaleString(undefined, { maximumFractionDigits: 2 })
 const fetcher = (url) => fetch(url).then((res) => res.json())
+const limits = [
+  { label: '200 latest commits', value: 200 },
+  { label: 'All time', value: 0 }
+]
 
 function Metric({ metric }) {
-  const { data: perf } = useSWR('/api/evolution/' + metric.id, fetcher)
+  const [currentLimit, setLimit] = useState(200)
+  const { data: perf } = useSWR('/api/evolution/' + metric.id + '?limit=' + currentLimit, fetcher)
 
   return (
-    <div className='m-10'>
+    <div className='m-4'>
       {perf?.length > 0 && (
         <>
-          <Line
-            data={{
-              labels: perf.map((p) => p.hash),
-              datasets: [
-                {
-                  label: metric.name,
-                  data: perf.map((p) => p.value),
-                  cubicInterpolationMode: 'monotone'
+          <div>
+            <div className='sm:hidden'>
+              <label htmlFor='tabs' className='sr-only'>
+                Select a limit
+              </label>
+              {/* Use an "onChange" listener to redirect the user to the selected tab URL. */}
+              <select
+                id='tabs'
+                name='tabs'
+                className='block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md'
+                defaultValue={200}
+                onChange={(event) => setLimit(parseInt(event.target.value))}
+              >
+                {limits.map((limit) => (
+                  <option key={limit.value}>{limit.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className='hidden sm:block'>
+              <div className='border-b border-gray-200'>
+                <nav className='-mb-px flex space-x-8' aria-label='Tabs'>
+                  {limits.map((limit) => (
+                    <button
+                      key={limit.value}
+                      className={classnames(
+                        limit.value === currentLimit
+                          ? 'border-indigo-500 text-indigo-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
+                        'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm'
+                      )}
+                      aria-current={limit.value === currentLimit ? 'page' : undefined}
+                      onClick={() => setLimit(limit.value)}
+                    >
+                      {limit.label}
+                    </button>
+                  ))}
+                </nav>
+              </div>
+            </div>
+          </div>
+          <div className='m-8'>
+            <Line
+              data={{
+                labels: perf.map((p) => p.hash),
+                datasets: [
+                  {
+                    label: metric.name,
+                    data: perf.map((p) => p.value)
+                  }
+                ]
+              }}
+              options={{
+                responsive: true,
+                scales: {
+                  x: {
+                    display: false
+                  },
+                  y: {
+                    min: 0
+                  }
                 }
-              ]
-            }}
-            options={{
-              responsive: true,
-              scales: {
-                x: {
-                  display: false
-                },
-                y: {
-                  min: 0
-                }
-              }
-            }}
-          />
+              }}
+            />
+            <div className='mt-4 rounded-md bg-blue-50 p-4'>
+              <div className='flex'>
+                <div className='flex-shrink-0'>
+                  <InformationCircleIcon className='h-5 w-5 text-blue-400' aria-hidden='true' />
+                </div>
+                <div className='ml-3 flex-1 md:flex md:justify-between'>
+                  <p className='text-sm text-blue-700'>
+                    For more stability, the following numbers compare the evolution of the metrics by computing average
+                    of 20 sequential values.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </>
       )}
     </div>
@@ -130,21 +189,6 @@ export default function Home() {
         {!metrics && <div className='w-full h-full flex flex-col items-center justify-center text-lg'>Loading...</div>}
         {metrics && !metrics.length && (
           <div className='w-full h-full flex flex-col items-center justify-center text-lg'>No data available.</div>
-        )}
-        {metrics && metrics.length && (
-          <div className='m-4 rounded-md bg-blue-50 p-4'>
-            <div className='flex'>
-              <div className='flex-shrink-0'>
-                <InformationCircleIcon className='h-5 w-5 text-blue-400' aria-hidden='true' />
-              </div>
-              <div className='ml-3 flex-1 md:flex md:justify-between'>
-                <p className='text-sm text-blue-700'>
-                  For more stability, the following numbers compare the evolution of the metrics by computing average of
-                  20 sequential values.
-                </p>
-              </div>
-            </div>
-          </div>
         )}
         {metrics && metrics.length && (
           <div className='px-4'>
