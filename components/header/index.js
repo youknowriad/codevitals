@@ -4,6 +4,11 @@ import { Fragment } from 'react'
 
 function UserMenu() {
   const { data: session } = useSession()
+
+  if (session === undefined) {
+    return null
+  }
+
   if (session) {
     return (
       <Menu as='div' className='relative inline-block text-left'>
@@ -45,10 +50,10 @@ function UserMenu() {
 
   return (
     <button
-      onClick={() => signIn()}
+      onClick={() => signIn('github')}
       className='ml-6 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-indigo-600 bg-white hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500'
     >
-      Sign in
+      Sign in with GitHub
     </button>
   )
 }
