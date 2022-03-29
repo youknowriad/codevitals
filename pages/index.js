@@ -2,9 +2,9 @@ import classnames from 'classnames'
 import useSWR from 'swr'
 import { Line } from 'react-chartjs-2'
 import { useState } from 'react'
-import { ArrowSmDownIcon, ArrowSmUpIcon, InformationCircleIcon } from '@heroicons/react/solid'
-import Header from '../components/header'
+import { ArrowSmDownIcon, ArrowSmUpIcon } from '@heroicons/react/solid'
 import Spinner from '../components/spinner'
+import Layout from '../components/layout'
 
 const formatNumber = (number) => number.toLocaleString(undefined, { maximumFractionDigits: 2 })
 const fetcher = (url) => fetch(url).then((res) => res.json())
@@ -18,7 +18,7 @@ function Metric({ metric }) {
   const { data: perf } = useSWR('/api/evolution/' + metric.id + '?limit=' + currentLimit, fetcher)
 
   return (
-    <div className='m-4'>
+    <div>
       <div>
         <div className='sm:hidden'>
           <label htmlFor='tabs' className='sr-only'>
@@ -183,28 +183,19 @@ export default function Home() {
   const displayedMetric = selectedMetric || metrics?.[0]
 
   return (
-    <>
-      <div className='h-screen flex flex-col'>
-        <div>
-          <Header />
-        </div>
-        <div className='flex-1'>
-          {!metrics && <div className='w-full h-full flex flex-col items-center justify-center text-lg'>Loading...</div>}
-          {metrics && !metrics.length && (
-            <div className='w-full flex flex-col items-center justify-center text-lg'>No data available.</div>
-          )}
-          {metrics && metrics.length && (
-            <div className='px-4'>
-              <dl className='mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3'>
-                {metrics.map((metric) => (
-                  <MetricCard key={metric.id} metric={metric} onSelect={() => setSelectedMetric(metric)} />
-                ))}
-              </dl>
-            </div>
-          )}
-          {displayedMetric && <Metric metric={displayedMetric || metrics?.[0]} />}
-        </div>
-      </div>
-    </>
+    <Layout>
+      {!metrics && <div className='w-full h-full flex flex-col items-center justify-center text-lg'>Loading...</div>}
+      {metrics && !metrics.length && (
+        <div className='w-full flex flex-col items-center justify-center text-lg'>No data available.</div>
+      )}
+      {metrics && metrics.length && (
+        <dl className='mb-4 grid grid-cols-1 gap-5 sm:grid-cols-3'>
+          {metrics.map((metric) => (
+            <MetricCard key={metric.id} metric={metric} onSelect={() => setSelectedMetric(metric)} />
+          ))}
+        </dl>
+      )}
+      {displayedMetric && <Metric metric={displayedMetric || metrics?.[0]} />}
+    </Layout>
   )
 }
