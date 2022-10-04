@@ -1,19 +1,17 @@
 import classnames from 'classnames'
 import useSWR from 'swr'
 import { Line } from 'react-chartjs-2'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react'
 import { ArrowSmDownIcon, ArrowSmUpIcon } from '@heroicons/react/solid'
 import Spinner from '../components/spinner'
 import Layout from '../components/layout'
 import { Chart, Tooltip } from 'chart.js'
 import dynamic from 'next/dynamic'
 
-// TODO: Is there a way to add it in next.config.js webpack options(https://nextjs.org/docs/api-reference/next.config.js/custom-webpack-config) and then just:
-// import zoomPlugin from 'chartjs-plugin-zoom';
-// Chart.register(zoomPlugin);
 const ZoomPlugin = dynamic(() => import('chartjs-plugin-zoom').then((mod) => Chart.register(mod.default)), {
   ssr: false
 })
+const plugins = [Tooltip]
 
 const formatNumber = (number) => number.toLocaleString(undefined, { maximumFractionDigits: 2 })
 const fetcher = (url) => fetch(url).then((res) => res.json())
@@ -21,12 +19,92 @@ const limits = [
   { label: '200 latest commits', value: 200 },
   { label: 'All time', value: 0 }
 ]
-
+const MemoLine = memo(Line)
 function Metric({ metric }) {
   const chartRef = useRef(null)
+  const [chartIsZoomed, setChartIsZoomed] = useState(false)
   const [currentLimit, setLimit] = useState(200)
   const { data: perf } = useSWR('/api/evolution/' + metric.id + '?limit=' + currentLimit, fetcher)
-
+  const [tooltipData, setTooltipData] = useState({
+    isVisible: false,
+    top: '50%',
+    left: '50%',
+    titleLines: [],
+    bodyLines: []
+  })
+  useEffect(() => {
+    if (tooltipData.isVisible) {
+      setTooltipData((prev) => ({ ...prev, isVisible: false }))
+    }
+  }, [metric, currentLimit, chartIsZoomed])
+  useEffect(() => {
+    if (chartIsZoomed) {
+      setChartIsZoomed(false)
+    }
+  }, [metric, currentLimit])
+  const customTooltip = useCallback((context) => {
+    const { chart, tooltip } = context
+    if (tooltip.opacity === 0) {
+      setTooltipData((prev) => ({ ...prev, isVisible: false }))
+      return
+    }
+    const position = chart.canvas.getBoundingClientRect()
+    setTooltipData({
+      isVisible: true,
+      left: position.left + tooltip.caretX,
+      top: position.top + tooltip.caretY,
+      titleLines: tooltip.title || [],
+      bodyLines: tooltip.body.map(({ lines }) => lines)
+    })
+  }, [])
+  const options = useMemo(
+    () => ({
+      responsive: true,
+      scales: {
+        x: {
+          display: false
+        },
+        y: {
+          min: 0
+        }
+      },
+      plugins: {
+        tooltip: {
+          events: ['click'],
+          enabled: false, // Disable the on-canvas tooltip.
+          external: customTooltip
+        },
+        zoom: {
+          pan: {
+            enabled: true,
+            mode: 'xy',
+            modifierKey: 'shift'
+          },
+          zoom: {
+            drag: {
+              enabled: true,
+              backgroundColor: 'rgba(59, 130, 246, 0.1)'
+            },
+            mode: 'x',
+            onZoomComplete: () => setChartIsZoomed(true)
+          }
+        }
+      }
+    }),
+    [customTooltip]
+  )
+  const data = useMemo(
+    () => ({
+      labels: perf?.map((p) => p.hash),
+      datasets: [
+        {
+          label: metric.name,
+          data: perf?.map((p) => p.value)
+        }
+      ]
+    }),
+    [perf]
+  )
   return (
     <div>
       <div>
@@ -69,11 +147,14 @@ function Metric({ metric }) {
                 ))}
               </nav>
               <button
-                className='py-2 px-4 border border-blue-500 text-gray-900 rounded-md text-sm'
+                className={classnames('py-2 px-4 border border-blue-500 text-gray-900 rounded-md text-sm', {
+                  'opacity-25': !chartIsZoomed,
+                  'cursor-not-allowed': !chartIsZoomed
+                })}
+                disabled={!chartIsZoomed}
                 onClick={() => {
-                  if (chartRef.current?.isZoomedOrPanned()) {
-                    chartRef.current.resetZoom()
-                  }
+                  chartRef.current.resetZoom()
+                  setChartIsZoomed(false)
                 }}
               >
                 Reset Zoom
@@ -84,51 +165,10 @@ function Metric({ metric }) {
       </div>
       <div className='m-8'>
         {!!perf?.length && (
-          <Line
-            ref={chartRef}
-            plugins={[Tooltip]}
-            data={{
-              labels: perf.map((p) => p.hash),
-              datasets: [
-                {
-                  label: metric.name,
-                  data: perf.map((p) => p.value)
-                }
-              ]
-            }}
-            options={{
-              responsive: true,
-              scales: {
-                x: {
-                  display: false
-                },
-                y: {
-                  min: 0
-                }
-              },
-              plugins: {
-                tooltip: {
-                  events: ['click'],
-                  enabled: false, // Disable the on-canvas tooltip.
-                  external: externalTooltipHandler
-                },
-                zoom: {
-                  pan: {
-                    enabled: true,
-                    mode: 'xy',
-                    modifierKey: 'shift'
-                  },
-                  zoom: {
-                    drag: {
-                      enabled: true,
-                      backgroundColor: 'rgba(59, 130, 246, 0.1)'
-                    },
-                    mode: 'x'
-                  }
-                }
-              }
-            }}
-          />
+          <>
+            <MemoLine ref={chartRef} plugins={plugins} data={data} options={options} />
+            <GraphTooltip tooltipData={tooltipData} />
+          </>
         )}
       </div>
     </div>
@@ -222,25 +262,51 @@ function MetricCard({ metric, onSelect }) {
   )
 }
 
+function GraphTooltip({ tooltipData }) {
+  return (
+    tooltipData && (
+      <div
+        id='chart-tooltip'
+        className='px-2 py-1'
+        style={{
+          background: 'rgba(0, 0, 0, 0.7)',
+          borderRadius: '3px',
+          position: 'absolute',
+          transform: 'translate(-50%, 0)',
+          transition: 'all .1s ease',
+          top: tooltipData.top,
+          left: tooltipData.left,
+          opacity: tooltipData.isVisible ? 1 : 0,
+          visibility: tooltipData.isVisible ? 'visible' : 'hidden'
+        }}
+      >
+        <div style={{ color: '#fff', fontSize: '12px' }}>
+          {tooltipData.titleLines.map((title, i) => (
+            <a
+              key={i}
+              href={`https://github.com/WordPress/gutenberg/commit/${title}`}
+              target='blank'
+              style={{ display: 'inline-block' }}
+            >
+              {title.slice(0, 7)}
+            </a>
+          ))}
+          {tooltipData.bodyLines.map((line, i) => (
+            <div className='flex items-center' key={i}>
+              <span style={{ background: 'white', width: '10px', height: '10px' }}></span>
+              <span style={{ marginLeft: '5px' }}>{line}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  )
+}
+
 export default function Home() {
   const { data: metrics } = useSWR('/api/metrics', fetcher)
   const [selectedMetric, setSelectedMetric] = useState()
   const displayedMetric = selectedMetric || metrics?.[0]
-
-  useEffect(() => {
-    // Add a listener to hide the tooltip when the user clicks outside of the tooltip contents.
-    const onClick = (event) => {
-      const tooltipEl = document.querySelector('#chart-tooltip')
-      if (tooltipEl && !tooltipEl?.contains(event.target)) {
-        tooltipEl.style.visibility = 'hidden'
-      }
-    }
-    window.addEventListener('click', onClick)
-    return () => {
-      window.removeEventListener('click', onClick)
-    }
-  }, [])
-
   return (
     <>
       <ZoomPlugin />
@@ -256,69 +322,8 @@ export default function Home() {
             ))}
           </dl>
         )}
-        {displayedMetric && <Metric metric={displayedMetric || metrics?.[0]} />}
+        {displayedMetric && <Metric metric={displayedMetric} />}
       </Layout>
     </>
   )
-}
-
-// We only create once the tooltip and update it when needed.
-const getOrCreateTooltip = (chart) => {
-  let tooltipEl = chart.canvas.parentNode.querySelector('#chart-tooltip')
-  if (!tooltipEl) {
-    tooltipEl = document.createElement('div')
-    tooltipEl.id = 'chart-tooltip'
-    tooltipEl.style.background = 'rgba(0, 0, 0, 0.7)'
-    tooltipEl.style.borderRadius = '3px'
-    // tooltipEl.style.opacity = '1'
-    tooltipEl.style.position = 'absolute'
-    tooltipEl.style.transform = 'translate(-50%, 0)'
-    tooltipEl.style.transition = 'all .1s ease'
-
-    const tooltipContainer = document.createElement('div')
-    tooltipContainer.className = 'tooltip-container'
-    tooltipContainer.style.color = 'white'
-    tooltipContainer.style.fontSize = '12px'
-
-    tooltipEl.appendChild(tooltipContainer)
-    chart.canvas.parentNode.appendChild(tooltipEl)
-  }
-  return tooltipEl
-}
-
-const externalTooltipHandler = (context) => {
-  const { chart, tooltip } = context
-  const tooltipEl = getOrCreateTooltip(chart)
-  // Hide if no tooltip.
-  if (tooltip.opacity === 0) {
-    tooltipEl.style.visibility = 'hidden'
-    return
-  }
-  tooltipEl.style.visibility = 'visible'
-  let innerHtml = ''
-  if (tooltip.body) {
-    const titleLines = tooltip.title || []
-    titleLines.forEach((title) => {
-      innerHtml += `<a href="https://github.com/WordPress/gutenberg/commit/${title}" target="blank" style="display:inline-block;cursor:pointer;">${title.slice(
-        0,
-        7
-      )}</a>`
-    })
-    const bodyLines = tooltip.body.map(({ lines }) => lines)
-    bodyLines.forEach((body, i) => {
-      innerHtml += `<div style="display:flex;align-items:center;">
-        <span style="background:white;width:10px;height:10px;"></span>
-        <span style="margin-left:5px;">${body}</span>
-      </div>`
-    })
-    const tooltipRoot = tooltipEl.querySelector('.tooltip-container')
-    tooltipRoot.innerHTML = innerHtml
-  }
-  const { offsetLeft: positionX, offsetTop: positionY } = chart.canvas
-  // Display, position, and set styles for font.
-  tooltipEl.style.opacity = 1
-  tooltipEl.style.left = positionX + tooltip.caretX + 'px'
-  tooltipEl.style.top = positionY + tooltip.caretY + 'px'
-  tooltipEl.style.font = tooltip.options.bodyFont.string
-  tooltipEl.style.padding = tooltip.options.padding + 'px ' + tooltip.options.padding + 'px'
 }
