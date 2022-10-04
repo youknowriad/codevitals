@@ -1,10 +1,17 @@
 import classnames from 'classnames'
 import useSWR from 'swr'
 import { Line } from 'react-chartjs-2'
-import { useState } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react'
 import { ArrowSmDownIcon, ArrowSmUpIcon } from '@heroicons/react/solid'
 import Spinner from '../components/spinner'
 import Layout from '../components/layout'
+import { Chart, Tooltip } from 'chart.js'
+import dynamic from 'next/dynamic'
+
+const ZoomPlugin = dynamic(() => import('chartjs-plugin-zoom').then((mod) => Chart.register(mod.default)), {
+  ssr: false
+})
+const plugins = [Tooltip]
 
 const formatNumber = (number) => number.toLocaleString(undefined, { maximumFractionDigits: 2 })
 const fetcher = (url) => fetch(url).then((res) => res.json())
@@ -12,11 +19,92 @@ const limits = [
   { label: '200 latest commits', value: 200 },
   { label: 'All time', value: 0 }
 ]
-
+const MemoLine = memo(Line)
 function Metric({ metric }) {
+  const chartRef = useRef(null)
+  const [chartIsZoomed, setChartIsZoomed] = useState(false)
   const [currentLimit, setLimit] = useState(200)
   const { data: perf } = useSWR('/api/evolution/' + metric.id + '?limit=' + currentLimit, fetcher)
-
+  const [tooltipData, setTooltipData] = useState({
+    isVisible: false,
+    top: '50%',
+    left: '50%',
+    titleLines: [],
+    bodyLines: []
+  })
+  useEffect(() => {
+    if (tooltipData.isVisible) {
+      setTooltipData((prev) => ({ ...prev, isVisible: false }))
+    }
+  }, [metric, currentLimit, chartIsZoomed])
+  useEffect(() => {
+    if (chartIsZoomed) {
+      setChartIsZoomed(false)
+    }
+  }, [metric, currentLimit])
+  const customTooltip = useCallback((context) => {
+    const { chart, tooltip } = context
+    if (tooltip.opacity === 0) {
+      setTooltipData((prev) => ({ ...prev, isVisible: false }))
+      return
+    }
+    const position = chart.canvas.getBoundingClientRect()
+    setTooltipData({
+      isVisible: true,
+      left: position.left + tooltip.caretX,
+      top: position.top + tooltip.caretY,
+      titleLines: tooltip.title || [],
+      bodyLines: tooltip.body.map(({ lines }) => lines)
+    })
+  }, [])
+  const options = useMemo(
+    () => ({
+      responsive: true,
+      scales: {
+        x: {
+          display: false
+        },
+        y: {
+          min: 0
+        }
+      },
+      plugins: {
+        tooltip: {
+          events: ['click'],
+          enabled: false, // Disable the on-canvas tooltip.
+          external: customTooltip
+        },
+        zoom: {
+          pan: {
+            enabled: true,
+            mode: 'xy',
+            modifierKey: 'shift'
+          },
+          zoom: {
+            drag: {
+              enabled: true,
+              backgroundColor: 'rgba(59, 130, 246, 0.1)'
+            },
+            mode: 'x',
+            onZoomComplete: () => setChartIsZoomed(true)
+          }
+        }
+      }
+    }),
+    [customTooltip]
+  )
+  const data = useMemo(
+    () => ({
+      labels: perf?.map((p) => p.hash),
+      datasets: [
+        {
+          label: metric.name,
+          data: perf?.map((p) => p.value)
+        }
+      ]
+    }),
+    [perf]
+  )
   return (
     <div>
       <div>
@@ -39,51 +127,48 @@ function Metric({ metric }) {
         </div>
         <div className='hidden sm:block'>
           <div className='border-b border-gray-200'>
-            <nav className='-mb-px flex space-x-8' aria-label='Tabs'>
-              {limits.map((limit) => (
-                <button
-                  key={limit.value}
-                  className={classnames(
-                    limit.value === currentLimit
-                      ? 'border-indigo-500 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
-                    'flex gap-2 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm'
-                  )}
-                  aria-current={limit.value === currentLimit ? 'page' : undefined}
-                  onClick={() => setLimit(limit.value)}
-                >
-                  {limit.label}
-                  {!perf?.length && limit.value === currentLimit && <Spinner />}
-                </button>
-              ))}
-            </nav>
+            <div className='flex justify-between'>
+              <nav className='-mb-px flex space-x-8' aria-label='Tabs'>
+                {limits.map((limit) => (
+                  <button
+                    key={limit.value}
+                    className={classnames(
+                      limit.value === currentLimit
+                        ? 'border-indigo-500 text-indigo-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
+                      'flex gap-2 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm'
+                    )}
+                    aria-current={limit.value === currentLimit ? 'page' : undefined}
+                    onClick={() => setLimit(limit.value)}
+                  >
+                    {limit.label}
+                    {!perf?.length && limit.value === currentLimit && <Spinner />}
+                  </button>
+                ))}
+              </nav>
+              <button
+                className={classnames('py-2 px-4 border border-blue-500 text-gray-900 rounded-md text-sm', {
+                  'opacity-25': !chartIsZoomed,
+                  'cursor-not-allowed': !chartIsZoomed
+                })}
+                disabled={!chartIsZoomed}
+                onClick={() => {
+                  chartRef.current.resetZoom()
+                  setChartIsZoomed(false)
+                }}
+              >
+                Reset Zoom
+              </button>
+            </div>
           </div>
         </div>
       </div>
       <div className='m-8'>
         {!!perf?.length && (
-          <Line
-            data={{
-              labels: perf.map((p) => p.hash),
-              datasets: [
-                {
-                  label: metric.name,
-                  data: perf.map((p) => p.value)
-                }
-              ]
-            }}
-            options={{
-              responsive: true,
-              scales: {
-                x: {
-                  display: false
-                },
-                y: {
-                  min: 0
-                }
-              }
-            }}
-          />
+          <>
+            <MemoLine ref={chartRef} plugins={plugins} data={data} options={options} />
+            <GraphTooltip tooltipData={tooltipData} />
+          </>
         )}
       </div>
     </div>
@@ -177,25 +262,68 @@ function MetricCard({ metric, onSelect }) {
   )
 }
 
+function GraphTooltip({ tooltipData }) {
+  return (
+    tooltipData && (
+      <div
+        id='chart-tooltip'
+        className='px-2 py-1'
+        style={{
+          background: 'rgba(0, 0, 0, 0.7)',
+          borderRadius: '3px',
+          position: 'absolute',
+          transform: 'translate(-50%, 0)',
+          transition: 'all .1s ease',
+          top: tooltipData.top,
+          left: tooltipData.left,
+          opacity: tooltipData.isVisible ? 1 : 0,
+          visibility: tooltipData.isVisible ? 'visible' : 'hidden'
+        }}
+      >
+        <div style={{ color: '#fff', fontSize: '12px' }}>
+          {tooltipData.titleLines.map((title, i) => (
+            <a
+              key={i}
+              href={`https://github.com/WordPress/gutenberg/commit/${title}`}
+              target='blank'
+              style={{ display: 'inline-block' }}
+            >
+              {title.slice(0, 7)}
+            </a>
+          ))}
+          {tooltipData.bodyLines.map((line, i) => (
+            <div className='flex items-center' key={i}>
+              <span style={{ background: 'white', width: '10px', height: '10px' }}></span>
+              <span style={{ marginLeft: '5px' }}>{line}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  )
+}
+
 export default function Home() {
   const { data: metrics } = useSWR('/api/metrics', fetcher)
   const [selectedMetric, setSelectedMetric] = useState()
   const displayedMetric = selectedMetric || metrics?.[0]
-
   return (
-    <Layout>
-      {!metrics && <div className='w-full h-full flex flex-col items-center justify-center text-lg'>Loading...</div>}
-      {metrics && !metrics.length && (
-        <div className='w-full flex flex-col items-center justify-center text-lg'>No data available.</div>
-      )}
-      {metrics && metrics.length && (
-        <dl className='mb-4 grid grid-cols-1 gap-5 sm:grid-cols-3'>
-          {metrics.map((metric) => (
-            <MetricCard key={metric.id} metric={metric} onSelect={() => setSelectedMetric(metric)} />
-          ))}
-        </dl>
-      )}
-      {displayedMetric && <Metric metric={displayedMetric || metrics?.[0]} />}
-    </Layout>
+    <>
+      <ZoomPlugin />
+      <Layout>
+        {!metrics && <div className='w-full h-full flex flex-col items-center justify-center text-lg'>Loading...</div>}
+        {metrics && !metrics.length && (
+          <div className='w-full flex flex-col items-center justify-center text-lg'>No data available.</div>
+        )}
+        {!!metrics?.length && (
+          <dl className='mb-4 grid grid-cols-1 gap-5 sm:grid-cols-3'>
+            {metrics.map((metric) => (
+              <MetricCard key={metric.id} metric={metric} onSelect={() => setSelectedMetric(metric)} />
+            ))}
+          </dl>
+        )}
+        {displayedMetric && <Metric metric={displayedMetric} />}
+      </Layout>
+    </>
   )
 }
