@@ -1,10 +1,19 @@
 import classnames from 'classnames'
 import useSWR from 'swr'
 import { Line } from 'react-chartjs-2'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ArrowSmDownIcon, ArrowSmUpIcon } from '@heroicons/react/solid'
 import Spinner from '../components/spinner'
 import Layout from '../components/layout'
+import { Chart, Tooltip } from 'chart.js'
+import dynamic from 'next/dynamic'
+
+// TODO: Is there a way to add it in next.config.js webpack options(https://nextjs.org/docs/api-reference/next.config.js/custom-webpack-config) and then just:
+// import zoomPlugin from 'chartjs-plugin-zoom';
+// Chart.register(zoomPlugin);
+const ZoomPlugin = dynamic(() => import('chartjs-plugin-zoom').then((mod) => Chart.register(mod.default)), {
+  ssr: false
+})
 
 const formatNumber = (number) => number.toLocaleString(undefined, { maximumFractionDigits: 2 })
 const fetcher = (url) => fetch(url).then((res) => res.json())
@@ -14,6 +23,7 @@ const limits = [
 ]
 
 function Metric({ metric }) {
+  const chartRef = useRef(null)
   const [currentLimit, setLimit] = useState(200)
   const { data: perf } = useSWR('/api/evolution/' + metric.id + '?limit=' + currentLimit, fetcher)
 
@@ -39,30 +49,44 @@ function Metric({ metric }) {
         </div>
         <div className='hidden sm:block'>
           <div className='border-b border-gray-200'>
-            <nav className='-mb-px flex space-x-8' aria-label='Tabs'>
-              {limits.map((limit) => (
-                <button
-                  key={limit.value}
-                  className={classnames(
-                    limit.value === currentLimit
-                      ? 'border-indigo-500 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
-                    'flex gap-2 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm'
-                  )}
-                  aria-current={limit.value === currentLimit ? 'page' : undefined}
-                  onClick={() => setLimit(limit.value)}
-                >
-                  {limit.label}
-                  {!perf?.length && limit.value === currentLimit && <Spinner />}
-                </button>
-              ))}
-            </nav>
+            <div className='flex justify-between'>
+              <nav className='-mb-px flex space-x-8' aria-label='Tabs'>
+                {limits.map((limit) => (
+                  <button
+                    key={limit.value}
+                    className={classnames(
+                      limit.value === currentLimit
+                        ? 'border-indigo-500 text-indigo-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
+                      'flex gap-2 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm'
+                    )}
+                    aria-current={limit.value === currentLimit ? 'page' : undefined}
+                    onClick={() => setLimit(limit.value)}
+                  >
+                    {limit.label}
+                    {!perf?.length && limit.value === currentLimit && <Spinner />}
+                  </button>
+                ))}
+              </nav>
+              <button
+                className='py-2 px-4 border border-blue-500 text-gray-900 rounded-md text-sm'
+                onClick={() => {
+                  if (chartRef.current?.isZoomedOrPanned()) {
+                    chartRef.current.resetZoom()
+                  }
+                }}
+              >
+                Reset Zoom
+              </button>
+            </div>
           </div>
         </div>
       </div>
       <div className='m-8'>
         {!!perf?.length && (
           <Line
+            ref={chartRef}
+            plugins={[Tooltip]}
             data={{
               labels: perf.map((p) => p.hash),
               datasets: [
@@ -80,6 +104,27 @@ function Metric({ metric }) {
                 },
                 y: {
                   min: 0
+                }
+              },
+              plugins: {
+                tooltip: {
+                  events: ['click'],
+                  enabled: false, // Disable the on-canvas tooltip.
+                  external: externalTooltipHandler
+                },
+                zoom: {
+                  pan: {
+                    enabled: true,
+                    mode: 'xy',
+                    modifierKey: 'shift'
+                  },
+                  zoom: {
+                    drag: {
+                      enabled: true,
+                      backgroundColor: 'rgba(59, 130, 246, 0.1)'
+                    },
+                    mode: 'x'
+                  }
                 }
               }
             }}
@@ -182,20 +227,98 @@ export default function Home() {
   const [selectedMetric, setSelectedMetric] = useState()
   const displayedMetric = selectedMetric || metrics?.[0]
 
+  useEffect(() => {
+    // Add a listener to hide the tooltip when the user clicks outside of the tooltip contents.
+    const onClick = (event) => {
+      const tooltipEl = document.querySelector('#chart-tooltip')
+      if (tooltipEl && !tooltipEl?.contains(event.target)) {
+        tooltipEl.style.visibility = 'hidden'
+      }
+    }
+    window.addEventListener('click', onClick)
+    return () => {
+      window.removeEventListener('click', onClick)
+    }
+  }, [])
+
   return (
-    <Layout>
-      {!metrics && <div className='w-full h-full flex flex-col items-center justify-center text-lg'>Loading...</div>}
-      {metrics && !metrics.length && (
-        <div className='w-full flex flex-col items-center justify-center text-lg'>No data available.</div>
-      )}
-      {metrics && metrics.length && (
-        <dl className='mb-4 grid grid-cols-1 gap-5 sm:grid-cols-3'>
-          {metrics.map((metric) => (
-            <MetricCard key={metric.id} metric={metric} onSelect={() => setSelectedMetric(metric)} />
-          ))}
-        </dl>
-      )}
-      {displayedMetric && <Metric metric={displayedMetric || metrics?.[0]} />}
-    </Layout>
+    <>
+      <ZoomPlugin />
+      <Layout>
+        {!metrics && <div className='w-full h-full flex flex-col items-center justify-center text-lg'>Loading...</div>}
+        {metrics && !metrics.length && (
+          <div className='w-full flex flex-col items-center justify-center text-lg'>No data available.</div>
+        )}
+        {!!metrics?.length && (
+          <dl className='mb-4 grid grid-cols-1 gap-5 sm:grid-cols-3'>
+            {metrics.map((metric) => (
+              <MetricCard key={metric.id} metric={metric} onSelect={() => setSelectedMetric(metric)} />
+            ))}
+          </dl>
+        )}
+        {displayedMetric && <Metric metric={displayedMetric || metrics?.[0]} />}
+      </Layout>
+    </>
   )
+}
+
+// We only create once the tooltip and update it when needed.
+const getOrCreateTooltip = (chart) => {
+  let tooltipEl = chart.canvas.parentNode.querySelector('#chart-tooltip')
+  if (!tooltipEl) {
+    tooltipEl = document.createElement('div')
+    tooltipEl.id = 'chart-tooltip'
+    tooltipEl.style.background = 'rgba(0, 0, 0, 0.7)'
+    tooltipEl.style.borderRadius = '3px'
+    // tooltipEl.style.opacity = '1'
+    tooltipEl.style.position = 'absolute'
+    tooltipEl.style.transform = 'translate(-50%, 0)'
+    tooltipEl.style.transition = 'all .1s ease'
+
+    const tooltipContainer = document.createElement('div')
+    tooltipContainer.className = 'tooltip-container'
+    tooltipContainer.style.color = 'white'
+    tooltipContainer.style.fontSize = '12px'
+
+    tooltipEl.appendChild(tooltipContainer)
+    chart.canvas.parentNode.appendChild(tooltipEl)
+  }
+  return tooltipEl
+}
+
+const externalTooltipHandler = (context) => {
+  const { chart, tooltip } = context
+  const tooltipEl = getOrCreateTooltip(chart)
+  // Hide if no tooltip.
+  if (tooltip.opacity === 0) {
+    tooltipEl.style.visibility = 'hidden'
+    return
+  }
+  tooltipEl.style.visibility = 'visible'
+  let innerHtml = ''
+  if (tooltip.body) {
+    const titleLines = tooltip.title || []
+    titleLines.forEach((title) => {
+      innerHtml += `<a href="https://github.com/WordPress/gutenberg/commit/${title}" target="blank" style="display:inline-block;cursor:pointer;">${title.slice(
+        0,
+        7
+      )}</a>`
+    })
+    const bodyLines = tooltip.body.map(({ lines }) => lines)
+    bodyLines.forEach((body, i) => {
+      innerHtml += `<div style="display:flex;align-items:center;">
+        <span style="background:white;width:10px;height:10px;"></span>
+        <span style="margin-left:5px;">${body}</span>
+      </div>`
+    })
+    const tooltipRoot = tooltipEl.querySelector('.tooltip-container')
+    tooltipRoot.innerHTML = innerHtml
+  }
+  const { offsetLeft: positionX, offsetTop: positionY } = chart.canvas
+  // Display, position, and set styles for font.
+  tooltipEl.style.opacity = 1
+  tooltipEl.style.left = positionX + tooltip.caretX + 'px'
+  tooltipEl.style.top = positionY + tooltip.caretY + 'px'
+  tooltipEl.style.font = tooltip.options.bodyFont.string
+  tooltipEl.style.padding = tooltip.options.padding + 'px ' + tooltip.options.padding + 'px'
 }
