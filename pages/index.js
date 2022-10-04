@@ -26,15 +26,11 @@ function Metric({ metric }) {
   const [currentLimit, setLimit] = useState(200)
   const { data: perf } = useSWR('/api/evolution/' + metric.id + '?limit=' + currentLimit, fetcher)
   const [tooltipData, setTooltipData] = useState({
-    isVisible: false,
-    top: '50%',
-    left: '50%',
-    titleLines: [],
-    bodyLines: []
+    isVisible: false
   })
   useEffect(() => {
     if (tooltipData.isVisible) {
-      setTooltipData((prev) => ({ ...prev, isVisible: false }))
+      setTooltipData({ isVisible: false })
     }
   }, [metric, currentLimit, chartIsZoomed])
   useEffect(() => {
@@ -264,7 +260,7 @@ function MetricCard({ metric, onSelect }) {
 
 function GraphTooltip({ tooltipData }) {
   return (
-    tooltipData && (
+    Number.isFinite(tooltipData.top) && (
       <div
         id='chart-tooltip'
         className='px-2 py-1'
