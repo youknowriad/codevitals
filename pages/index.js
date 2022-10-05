@@ -41,7 +41,7 @@ function Metric({ metric }) {
   const customTooltip = useCallback((context) => {
     const { chart, tooltip } = context
     if (tooltip.opacity === 0) {
-      setTooltipData((prev) => ({ ...prev, isVisible: false }))
+      setTooltipData({ isVisible: false })
       return
     }
     const position = chart.canvas.getBoundingClientRect()
