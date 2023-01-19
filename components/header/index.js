@@ -1,6 +1,10 @@
 import { useSession, signIn, signOut } from 'next-auth/react'
 import { Menu, Transition } from '@headlessui/react'
+import useSWR from 'swr'
 import { Fragment } from 'react'
+import { useRouter } from 'next/router'
+
+const fetcher = (url) => fetch(url).then((res) => res.json())
 
 function UserMenu() {
   const { data: session } = useSession()
@@ -58,13 +62,28 @@ function UserMenu() {
   )
 }
 
+function ProjectName({ id }) {
+  const { data: project } = useSWR('/api/project/' + id, fetcher)
+  return project?.name ?? null
+}
+
 export default function Header() {
+  const router = useRouter()
+  const { project_id } = router.query
+
   return (
     <header className='bg-wordpress'>
       <nav className='mx-auto' aria-label='Top'>
         <div className='h-16 w-full flex items-center justify-between border-b border-wordpress lg:border-none py-2 px-4'>
           <a className='flex items-center text-base font-medium text-white hover:text-indigo-50' href='#'>
-            <span>Gutenberg Performance</span>
+            <span>
+              Code Health{' '}
+              {project_id && (
+                <strong>
+                  <ProjectName id={project_id} />
+                </strong>
+              )}
+            </span>
           </a>
 
           <UserMenu />
