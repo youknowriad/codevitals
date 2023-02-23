@@ -77,12 +77,12 @@ export default function Header() {
         <div className='h-16 w-full flex items-center justify-between border-b border-wordpress lg:border-none py-2 px-4'>
           <a className='flex items-center text-base font-medium text-white hover:text-indigo-50' href='#'>
             <span>
-              Code Health{' '}
               {project_id && (
                 <strong>
-                  <ProjectName id={project_id} />
+                  <ProjectName id={project_id} />{' '}
                 </strong>
               )}
+              Code Vitals
             </span>
           </a>
 
