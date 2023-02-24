@@ -62,14 +62,14 @@ function UserMenu() {
   )
 }
 
-function ProjectName({ id }) {
-  const { data: project } = useSWR('/api/project/' + id, fetcher)
+function ProjectName({ slug }) {
+  const { data: project } = useSWR('/api/project/' + slug, fetcher)
   return project?.name ?? null
 }
 
 export default function Header() {
   const router = useRouter()
-  const { project_id } = router.query
+  const { project_slug } = router.query
 
   return (
     <header className='bg-wordpress'>
@@ -77,9 +77,9 @@ export default function Header() {
         <div className='h-16 w-full flex items-center justify-between border-b border-wordpress lg:border-none py-2 px-4'>
           <a className='flex items-center text-base font-medium text-white hover:text-indigo-50' href='#'>
             <span>
-              {project_id && (
+              {project_slug && (
                 <strong>
-                  <ProjectName id={project_id} />{' '}
+                  <ProjectName slug={project_slug} />{' '}
                 </strong>
               )}
               Code Vitals

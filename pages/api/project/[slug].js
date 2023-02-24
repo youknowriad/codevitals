@@ -3,10 +3,10 @@ import { PSDB } from 'planetscale-node'
 const conn = new PSDB('main')
 
 export default async (req, res) => {
-  const { id } = req.query
+  const { slug } = req.query
   const [projects] = await conn.query(
-    'select project.id as id, project.name as name, count( DISTINCT metric.id ) as countMetrics from project join metric on metric.project_id = project.id where project.id = ?',
-    id
+    'select project.id as id, project.name as name, project.slug as slug, count( DISTINCT metric.id ) as countMetrics from project join metric on metric.project_id = project.id where project.slug = ? GROUP BY project.id',
+    slug
   )
   if (!projects.length) {
     res.statusCode = 404

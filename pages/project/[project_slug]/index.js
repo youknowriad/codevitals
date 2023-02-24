@@ -300,10 +300,8 @@ function GraphTooltip({ tooltipData }) {
   )
 }
 
-function Metrics() {
-  const router = useRouter()
-  const { project_id } = router.query
-  const { data: metrics } = useSWR('/api/metrics/' + project_id, fetcher)
+function Metrics({ id }) {
+  const { data: metrics } = useSWR('/api/metrics/' + id, fetcher)
   const [selectedMetric, setSelectedMetric] = useState()
   const displayedMetric = selectedMetric || metrics?.[0]
   return (
@@ -327,7 +325,19 @@ function Metrics() {
   )
 }
 
+function ProjectMetrics() {
+  const router = useRouter()
+  const { project_slug } = router.query
+  const { data: project } = useSWR('/api/project/' + project_slug, fetcher)
+
+  if (!project) {
+    return null
+  }
+
+  return <Metrics id={project.id} />
+}
+
 export default function Home() {
   const router = useRouter()
-  return router.isReady ? <Metrics /> : null
+  return router.isReady ? <ProjectMetrics /> : null
 }
