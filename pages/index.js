@@ -8,10 +8,10 @@ export default function Home() {
   const { data: projects } = useSWR('/api/projects', fetcher)
   const router = useRouter()
   useEffect(() => {
-    if (! projects || projects?.length === 0) {
+    if (!projects || projects?.length === 0) {
       return
     }
-    router.push(`/project/${projects?.[0]?.id}`)
+    router.push(`/project/${projects?.[0]?.slug}`)
   }, [projects])
 
   return null
