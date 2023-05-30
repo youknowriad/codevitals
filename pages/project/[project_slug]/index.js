@@ -21,7 +21,7 @@ const limits = [
   { label: 'All time', value: 0 }
 ]
 const MemoLine = memo(Line)
-function Metric({ metric }) {
+function Metric({ metric, repository }) {
   const chartRef = useRef(null)
   const [chartIsZoomed, setChartIsZoomed] = useState(false)
   const [currentLimit, setLimit] = useState(200)
@@ -164,7 +164,7 @@ function Metric({ metric }) {
         {!!perf?.length && (
           <>
             <MemoLine ref={chartRef} plugins={plugins} data={data} options={options} />
-            <GraphTooltip tooltipData={tooltipData} />
+            <GraphTooltip repository={repository} tooltipData={tooltipData} />
           </>
         )}
       </div>
@@ -259,7 +259,7 @@ function MetricCard({ metric, onSelect }) {
   )
 }
 
-function GraphTooltip({ tooltipData }) {
+function GraphTooltip({ repository, tooltipData }) {
   return (
     Number.isFinite(tooltipData.top) && (
       <div
@@ -281,7 +281,7 @@ function GraphTooltip({ tooltipData }) {
           {tooltipData.titleLines.map((title, i) => (
             <a
               key={i}
-              href={`https://github.com/WordPress/gutenberg/commit/${title}`}
+              href={`https://github.com/${repository}/commit/${title}`}
               target='blank'
               style={{ display: 'inline-block' }}
             >
@@ -300,7 +300,7 @@ function GraphTooltip({ tooltipData }) {
   )
 }
 
-function Metrics({ id }) {
+function Metrics({ id, repository }) {
   const { data: metrics } = useSWR('/api/metrics/' + id, fetcher)
   const [selectedMetric, setSelectedMetric] = useState()
   const displayedMetric = selectedMetric || metrics?.[0]
@@ -319,7 +319,7 @@ function Metrics({ id }) {
             ))}
           </dl>
         )}
-        {displayedMetric && <Metric metric={displayedMetric} />}
+        {displayedMetric && <Metric metric={displayedMetric} repository={repository} />}
       </Layout>
     </>
   )
@@ -334,7 +334,7 @@ function ProjectMetrics() {
     return null
   }
 
-  return <Metrics id={project.id} />
+  return <Metrics id={project.id} repository={project.repository} />
 }
 
 export default function Home() {
