@@ -5,11 +5,13 @@ import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react'
 import { ArrowSmDownIcon, ArrowSmUpIcon } from '@heroicons/react/solid'
 import Spinner from '../../../components/spinner'
 import Layout from '../../../components/layout'
-import { Chart, Tooltip } from 'chart.js'
+import { Chart as ChartJS, Tooltip, registerables } from 'chart.js'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/router'
 
-const ZoomPlugin = dynamic(() => import('chartjs-plugin-zoom').then((mod) => Chart.register(mod.default)), {
+ChartJS.register(...registerables)
+
+const ZoomPlugin = dynamic(() => import('chartjs-plugin-zoom').then((mod) => ChartJS.register(mod.default)), {
   ssr: false
 })
 const plugins = [Tooltip]
