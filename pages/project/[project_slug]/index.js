@@ -176,7 +176,7 @@ function Metric({ metric, repository }) {
   )
 }
 
-function MetricCard({ metric, onSelect }) {
+function MetricCard({ metric, onSelect, isActive }) {
   const { data } = useSWR('/api/average/' + metric.id, fetcher)
   let sentiment = 'neutral'
   const change = data && data.average && data.previous ? (data.average - data.previous) / data.previous : false
@@ -190,7 +190,13 @@ function MetricCard({ metric, onSelect }) {
     <div
       role='button'
       onClick={onSelect}
-      className='px-4 py-5 bg-gray-50 shadow rounded-sm overflow-hidden sm:p-6 pointer hover:bg-gray-100'
+      className={classnames(
+        'px-4 py-5 overflow-hidden sm:p-6 pointer bg-gray-50 hover:bg-gray-100 border-b border-r border-gray-200 border-t',
+        {
+          'bg-gray-100': isActive
+        }
+      )}
+      style={{ marginBottom: -1 }}
     >
       <dt className='text-base font-normal text-gray-900'>{metric.name}</dt>
       {!data && (
@@ -212,9 +218,6 @@ function MetricCard({ metric, onSelect }) {
           {data?.average && (
             <div className='flex items-baseline text-2xl font-semibold text-wordpress'>
               {formatNumber(data.average)}
-              {data.previous && (
-                <span className='ml-2 text-sm font-medium text-gray-500'>from {formatNumber(data.previous)}</span>
-              )}
             </div>
           )}
 
@@ -317,13 +320,22 @@ function Metrics({ id, repository }) {
           <div className='w-full flex flex-col items-center justify-center text-lg'>No data available.</div>
         )}
         {!!metrics?.length && (
-          <dl className='mb-4 grid grid-cols-1 gap-5 sm:grid-cols-3'>
+          <dl className='grid grid-cols-1 sm:grid-cols-5 bg-gray-50 border-b border-gray-200'>
             {metrics.map((metric) => (
-              <MetricCard key={metric.id} metric={metric} onSelect={() => setSelectedMetric(metric)} />
+              <MetricCard
+                key={metric.id}
+                metric={metric}
+                onSelect={() => setSelectedMetric(metric)}
+                isActive={displayedMetric === metric}
+              />
             ))}
           </dl>
         )}
-        {displayedMetric && <Metric metric={displayedMetric} repository={repository} />}
+        {displayedMetric && (
+          <div className='p-4'>
+            <Metric metric={displayedMetric} repository={repository} />
+          </div>
+        )}
       </Layout>
     </>
   )

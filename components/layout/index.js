@@ -6,7 +6,7 @@ export default function Layout({ children }) {
       <div>
         <Header />
       </div>
-      <div className='flex-1 p-4'>{children}</div>
+      <div className='flex-1'>{children}</div>
     </div>
   )
 }
