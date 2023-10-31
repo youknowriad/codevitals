@@ -19,8 +19,8 @@ const plugins = [Tooltip]
 const formatNumber = (number) => number.toLocaleString(undefined, { maximumFractionDigits: 2 })
 const fetcher = (url) => fetch(url).then((res) => res.json())
 const limits = [
-  { label: '200 latest commits', value: 200 },
-  { label: 'All time', value: 0 }
+  { label: '200 commits', value: 200 },
+  { label: '1000 commits', value: 1000 }
 ]
 const MemoLine = memo(Line)
 function Metric({ metric, repository }) {
