@@ -61,7 +61,7 @@ function LimitPicker({ limit: currentLimit, onChange }) {
         </nav>
       </div>
     </div>
-  );
+  )
 }
 
 function ZoomReset({ isActive, onReset }) {
@@ -170,11 +170,14 @@ function Metric({ metric, repository }) {
         <div className='px-4'>
           <LimitPicker limit={limit} onChange={setLimit} />
         </div>
-        <div className="py-3 px-4">
-          <ZoomReset isActive={chartIsZoomed} onReset={() => {
-            setChartIsZoomed(false)
-            chartRef.current.resetZoom()
-          }} />
+        <div className='py-3 px-4'>
+          <ZoomReset
+            isActive={chartIsZoomed}
+            onReset={() => {
+              setChartIsZoomed(false)
+              chartRef.current.resetZoom()
+            }}
+          />
         </div>
       </div>
       <div className='p-4 m-8'>
@@ -344,9 +347,7 @@ function Metrics({ id, repository }) {
             ))}
           </dl>
         )}
-        {displayedMetric && (
-          <Metric metric={displayedMetric} repository={repository} />
-        )}
+        {displayedMetric && <Metric metric={displayedMetric} repository={repository} />}
       </Layout>
     </>
   )
