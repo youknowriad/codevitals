@@ -1,9 +1,8 @@
 import classnames from 'classnames'
 import useSWR from 'swr'
 import { Line } from 'react-chartjs-2'
-import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { ArrowSmDownIcon, ArrowSmUpIcon } from '@heroicons/react/solid'
-import Spinner from '../../../components/spinner'
 import Layout from '../../../components/layout'
 import { Chart as ChartJS, Tooltip, registerables } from 'chart.js'
 import dynamic from 'next/dynamic'
@@ -22,12 +21,71 @@ const limits = [
   { label: '200 commits', value: 200 },
   { label: '1000 commits', value: 1000 }
 ]
-const MemoLine = memo(Line)
+function LimitPicker({ limit: currentLimit, onChange }) {
+  return (
+    <div>
+      <div className='sm:hidden'>
+        <label htmlFor='tabs' className='sr-only'>
+          Select a limit
+        </label>
+        {/* Use an "onChange" listener to redirect the user to the selected tab URL. */}
+        <select
+          id='tabs'
+          name='tabs'
+          className='block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md'
+          defaultValue={200}
+          onChange={(event) => onChange(parseInt(event.target.value))}
+        >
+          {limits.map((limit) => (
+            <option key={limit.value}>{limit.label}</option>
+          ))}
+        </select>
+      </div>
+      <div className='hidden sm:block'>
+        <nav className='-mb-px flex space-x-8' aria-label='Tabs'>
+          {limits.map((limit) => (
+            <button
+              key={limit.value}
+              className={classnames(
+                limit.value === currentLimit
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
+                'flex gap-2 whitespace-nowrap py-5 px-1 border-b-2 font-medium text-sm'
+              )}
+              aria-current={limit.value === currentLimit ? 'page' : undefined}
+              onClick={() => onChange(limit.value)}
+            >
+              {limit.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+    </div>
+  );
+}
+
+function ZoomReset({ isActive, onReset }) {
+  return (
+    <button
+      className={classnames('py-2 px-4 border border-blue-500 text-gray-900 rounded-md text-sm', {
+        'opacity-25': !isActive,
+        'cursor-not-allowed': !isActive
+      })}
+      disabled={!isActive}
+      onClick={() => {
+        onReset()
+      }}
+    >
+      Reset Zoom
+    </button>
+  )
+}
+
 function Metric({ metric, repository }) {
   const chartRef = useRef(null)
   const [chartIsZoomed, setChartIsZoomed] = useState(false)
-  const [currentLimit, setLimit] = useState(200)
-  const { data: perf } = useSWR('/api/evolution/' + metric.id + '?limit=' + currentLimit, fetcher)
+  const [limit, setLimit] = useState(200)
+  const { data: perf } = useSWR('/api/evolution/' + metric.id + '?limit=' + limit, fetcher)
   const [tooltipData, setTooltipData] = useState({
     isVisible: false
   })
@@ -35,12 +93,12 @@ function Metric({ metric, repository }) {
     if (tooltipData.isVisible) {
       setTooltipData({ isVisible: false })
     }
-  }, [metric, currentLimit, chartIsZoomed])
+  }, [metric, limit, chartIsZoomed])
   useEffect(() => {
     if (chartIsZoomed) {
       setChartIsZoomed(false)
     }
-  }, [metric, currentLimit])
+  }, [metric, limit])
   const customTooltip = useCallback((context) => {
     const { chart, tooltip } = context
     if (tooltip.opacity === 0) {
@@ -108,66 +166,21 @@ function Metric({ metric, repository }) {
   )
   return (
     <div>
-      <div>
-        <div className='sm:hidden'>
-          <label htmlFor='tabs' className='sr-only'>
-            Select a limit
-          </label>
-          {/* Use an "onChange" listener to redirect the user to the selected tab URL. */}
-          <select
-            id='tabs'
-            name='tabs'
-            className='block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md'
-            defaultValue={200}
-            onChange={(event) => setLimit(parseInt(event.target.value))}
-          >
-            {limits.map((limit) => (
-              <option key={limit.value}>{limit.label}</option>
-            ))}
-          </select>
+      <div className='flex justify-between border-b border-gray-200 mt-1'>
+        <div className='px-4'>
+          <LimitPicker limit={limit} onChange={setLimit} />
         </div>
-        <div className='hidden sm:block'>
-          <div className='border-b border-gray-200'>
-            <div className='flex justify-between'>
-              <nav className='-mb-px flex space-x-8' aria-label='Tabs'>
-                {limits.map((limit) => (
-                  <button
-                    key={limit.value}
-                    className={classnames(
-                      limit.value === currentLimit
-                        ? 'border-indigo-500 text-indigo-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
-                      'flex gap-2 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm'
-                    )}
-                    aria-current={limit.value === currentLimit ? 'page' : undefined}
-                    onClick={() => setLimit(limit.value)}
-                  >
-                    {limit.label}
-                    {!perf?.length && limit.value === currentLimit && <Spinner />}
-                  </button>
-                ))}
-              </nav>
-              <button
-                className={classnames('py-2 px-4 border border-blue-500 text-gray-900 rounded-md text-sm', {
-                  'opacity-25': !chartIsZoomed,
-                  'cursor-not-allowed': !chartIsZoomed
-                })}
-                disabled={!chartIsZoomed}
-                onClick={() => {
-                  chartRef.current.resetZoom()
-                  setChartIsZoomed(false)
-                }}
-              >
-                Reset Zoom
-              </button>
-            </div>
-          </div>
+        <div className="py-3 px-4">
+          <ZoomReset isActive={chartIsZoomed} onReset={() => {
+            setChartIsZoomed(false)
+            chartRef.current.resetZoom()
+          }} />
         </div>
       </div>
-      <div className='m-8'>
+      <div className='p-4 m-8'>
         {!!perf?.length && (
           <>
-            <MemoLine ref={chartRef} plugins={plugins} data={data} options={options} />
+            <Line ref={chartRef} plugins={plugins} data={data} options={options} />
             <GraphTooltip repository={repository} tooltipData={tooltipData} />
           </>
         )}
@@ -332,9 +345,7 @@ function Metrics({ id, repository }) {
           </dl>
         )}
         {displayedMetric && (
-          <div className='p-4'>
-            <Metric metric={displayedMetric} repository={repository} />
-          </div>
+          <Metric metric={displayedMetric} repository={repository} />
         )}
       </Layout>
     </>
