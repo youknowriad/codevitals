@@ -1,4 +1,4 @@
-import 'tailwindcss/tailwind.css'
+import './global.css'
 import { SessionProvider } from 'next-auth/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 

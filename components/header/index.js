@@ -1,8 +1,8 @@
 import { useSession, signIn, signOut } from 'next-auth/react'
-import { Menu, Transition } from '@headlessui/react'
 import useSWR from 'swr'
-import { Fragment } from 'react'
 import { useRouter } from 'next/router'
+import { Button } from '../ui/button'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu'
 
 const fetcher = (url) => fetch(url).then((res) => res.json())
 
@@ -15,51 +15,19 @@ function UserMenu() {
 
   if (session) {
     return (
-      <Menu as='div' className='relative inline-block text-left'>
-        <div>
-          <Menu.Button className='inline-flex justify-center w-full py-2 text-sm font-medium text-white rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75'>
-            <span className='sr-only'>Open user menu</span>
-            <img className='h-8 w-8 rounded-full' src={session.user.image} alt='' />
-          </Menu.Button>
-        </div>
-        <Transition
-          as={Fragment}
-          enter='transition ease-out duration-100'
-          enterFrom='transform opacity-0 scale-95'
-          enterTo='transform opacity-100 scale-100'
-          leave='transition ease-in duration-75'
-          leaveFrom='transform opacity-100 scale-100'
-          leaveTo='transform opacity-0 scale-95'
-        >
-          <Menu.Items className='absolute right-0 w-56 mt-2 origin-top-right bg-white divide-y divide-gray-100 rounded-sm shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none'>
-            <div className='px-1 py-1'>
-              <Menu.Item>
-                {({ active }) => (
-                  <button
-                    className={`${
-                      active ? 'bg-indigo-600 text-white' : 'text-gray-900'
-                    } group flex rounded-md items-center w-full px-2 py-2 text-sm`}
-                    onClick={() => signOut()}
-                  >
-                    Sign out
-                  </button>
-                )}
-              </Menu.Item>
-            </div>
-          </Menu.Items>
-        </Transition>
-      </Menu>
+      <DropdownMenu className='mr-6'>
+        <DropdownMenuTrigger>
+          <span className='sr-only'>Open user menu</span>
+          <img className='h-8 w-8 rounded-full' src={session.user.image} alt='' />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align='end' sideOffset='1'>
+          <DropdownMenuItem onClick={() => signOut()}>Sign out</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     )
   }
 
-  return (
-    <button
-      onClick={() => signIn('github')}
-      className='ml-6 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-indigo-600 bg-white hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500'
-    >
-      Sign in with GitHub
-    </button>
-  )
+  return <Button onClick={() => signIn('github')}>Sign in with GitHub</Button>
 }
 
 function ProjectName({ slug }) {
