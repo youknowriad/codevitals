@@ -7,6 +7,7 @@ import Layout from '../../../components/layout'
 import { Chart as ChartJS, Tooltip, registerables } from 'chart.js'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/router'
+import { Button } from '../../../components/ui/button'
 
 ChartJS.register(...registerables)
 
@@ -66,18 +67,14 @@ function LimitPicker({ limit: currentLimit, onChange }) {
 
 function ZoomReset({ isActive, onReset }) {
   return (
-    <button
-      className={classnames('py-2 px-4 border border-blue-500 text-gray-900 rounded-md text-sm', {
-        'opacity-25': !isActive,
-        'cursor-not-allowed': !isActive
-      })}
+    <Button
       disabled={!isActive}
       onClick={() => {
         onReset()
       }}
     >
       Reset Zoom
-    </button>
+    </Button>
   )
 }
 
