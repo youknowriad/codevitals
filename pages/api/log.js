@@ -28,13 +28,21 @@ export default async (req, res) => {
           const availableMetric = availableMetrics.find((m) => m.key === metricKey)
           const baseValue = availableMetric ? basePerfs.find((p) => p.metric_id === availableMetric.id) : null
           if (availableMetric && !baseValue) {
-            baseTuples.push([project.id, baseHash, baseHash, availableMetric.id, metricValue, new Date(timestamp)])
+            baseTuples.push([
+              project.id,
+              baseHash,
+              baseHash,
+              availableMetric.id,
+              metricValue,
+              metricValue,
+              new Date(timestamp)
+            ])
           }
         })
 
         for (const tuple of baseTuples) {
           await conn.query(
-            'insert into perf (project_id, branch, hash, metric_id, value, measured_at) values (?,?,?,?,?,?)',
+            'insert into perf (project_id, branch, hash, metric_id, value, raw_value, measured_at) values (?,?,?,?,?,?,?)',
             tuple
           )
         }
@@ -52,6 +60,7 @@ export default async (req, res) => {
               hash,
               availableMetric.id,
               baseValue ? (metricValue * baseValue.value) / baseMetrics[availableMetric.key] : metricValue,
+              metricValue,
               new Date(timestamp)
             ])
           }
@@ -59,7 +68,7 @@ export default async (req, res) => {
 
         for (const tuple of tuples) {
           await conn.query(
-            'insert into perf (project_id, branch, hash, metric_id, value, measured_at) values (?,?,?,?,?,?)',
+            'insert into perf (project_id, branch, hash, metric_id, value, raw_value, measured_at) values (?,?,?,?,?,?,?)',
             tuple
           )
         }
