@@ -1,13 +1,11 @@
-// Next.js API route support: https://nextjs.org/docs/api-routes/introduction
-import { PSDB } from 'planetscale-node'
-
-const conn = new PSDB('main')
+import mysql from 'mysql2/promise'
 
 export default async (req, res) => {
   const {
     method,
     query: { token }
   } = req
+  const conn = await mysql.createConnection(process.env.DATABASE_URL)
   switch (method) {
     case 'POST':
       try {
