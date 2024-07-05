@@ -1,8 +1,6 @@
 import NextAuth from 'next-auth'
 import GithubProvider from 'next-auth/providers/github'
-import { PSDB } from 'planetscale-node'
-
-const conn = new PSDB('main')
+import mysql from 'mysql2/promise'
 
 export default NextAuth({
   providers: [
@@ -13,17 +11,19 @@ export default NextAuth({
   ],
   callbacks: {
     async signIn({ user }) {
-      const [users] = await conn.query('select id from user where email = ?', user.email)
+      const connection = await mysql.createConnection(process.env.DATABASE_URL)
+      const [users] = await connection.query('select id from user where email = ?', user.email)
       if (!users.length) {
-        await conn.query('insert into user (email, created_at) values (?,?)', [user.email, new Date()])
+        await connection.query('insert into user (email, created_at) values (?,?)', [user.email, new Date()])
       }
 
       return true
     },
 
     async jwt({ token, user }) {
+      const connection = await mysql.createConnection(process.env.DATABASE_URL)
       if (user?.email) {
-        const [users] = await conn.query('select id from user where email = ?', user.email)
+        const [users] = await connection.query('select id from user where email = ?', user.email)
         if (users.length) {
           token.userId = users[0].id
         }
