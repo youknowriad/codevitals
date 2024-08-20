@@ -181,12 +181,10 @@ function Metric({ metric, repository }) {
         </div>
       </div>
       <div className='p-4 m-8'>
-        {!!perf?.length && (
-          <>
-            <Line ref={chartRef} plugins={plugins} data={data} options={options} />
-            <GraphTooltip repository={repository} tooltipData={tooltipData} />
-          </>
-        )}
+        <>
+          <Line ref={chartRef} plugins={plugins} data={data} options={options} />
+          <GraphTooltip repository={repository} tooltipData={tooltipData} />
+        </>
       </div>
     </div>
   )
