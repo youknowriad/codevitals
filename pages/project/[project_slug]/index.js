@@ -205,10 +205,8 @@ function MetricCard({ metric, onSelect, isActive }) {
       role='button'
       onClick={onSelect}
       className={classnames(
-        'px-4 py-5 overflow-hidden sm:p-6 pointer bg-gray-50 hover:bg-gray-100 border-b border-r border-gray-200 border-t',
-        {
-          'bg-gray-100': isActive
-        }
+        'px-4 py-5 overflow-hidden sm:p-6 pointer hover:bg-gray-100 border-b border-r border-gray-200 border-t',
+        isActive ? 'bg-gray-100' : 'bg-gray-50'
       )}
       style={{ marginBottom: -1 }}
     >
