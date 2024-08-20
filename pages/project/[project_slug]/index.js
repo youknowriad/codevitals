@@ -324,9 +324,31 @@ function GraphTooltip({ repository, tooltipData }) {
 }
 
 function Metrics({ id, repository }) {
+  const router = useRouter()
+  const { metric: queryKey } = router.query
   const { data: metrics } = useSWR('/api/metrics/' + id, fetcher)
   const [selectedMetric, setSelectedMetric] = useState()
-  const displayedMetric = selectedMetric || metrics?.[0]
+
+  let displayedMetric = selectedMetric
+
+  if (!displayedMetric) {
+    const queryMetric = metrics?.find((metric) => metric.key === queryKey)
+    const defaultMetric = metrics?.[0]
+
+    displayedMetric = queryMetric || defaultMetric
+  }
+
+  if (displayedMetric && queryKey !== displayedMetric.key) {
+    router.push(
+      {
+        pathname: router.pathname,
+        query: { ...router.query, metric: displayedMetric.key }
+      },
+      undefined,
+      {}
+    )
+  }
+
   return (
     <>
       <ZoomPlugin />
