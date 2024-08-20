@@ -345,7 +345,7 @@ function Metrics({ id, repository }) {
         query: { ...router.query, metric: displayedMetric.key }
       },
       undefined,
-      {}
+      { scroll: false }
     )
   }
 
