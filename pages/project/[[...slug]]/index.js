@@ -339,7 +339,7 @@ function Metrics({ id, repository }) {
       <Layout>
         {!metrics && <div className='w-full h-full flex flex-col items-center justify-center text-lg'>Loading...</div>}
         {metrics && !metrics.length && (
-          <div className='w-full flex flex-col items-center justify-center text-lg'>No data available.</div>
+          <div className='w-full h-full flex flex-col items-center justify-center text-lg'>No data available.</div>
         )}
         {!!metrics?.length && (
           <dl className='grid grid-cols-1 sm:grid-cols-5 bg-gray-50 border-b border-gray-200'>
