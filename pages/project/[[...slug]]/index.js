@@ -323,8 +323,8 @@ function Metrics({ id, repository }) {
   const router = useRouter()
   const [projectSlug, metricSlug] = router.query.slug
   const { data: metrics } = useSWR('/api/metrics/' + id, fetcher)
-  const [selectedMetric, setSelectedMetric] = useState()
-  const displayedMetric = selectedMetric || metrics?.[0]
+  const metricFromParam = metrics?.find((metric) => metric.key === metricSlug)
+  const displayedMetric = metricFromParam || metrics?.[0]
 
   useEffect(() => {
     // Set the metric slug in the URL if it's not already set.
@@ -347,10 +347,7 @@ function Metrics({ id, repository }) {
               <MetricCard
                 key={metric.id}
                 metric={metric}
-                onSelect={() => {
-                  setSelectedMetric(metric)
-                  router.push(`/project/${projectSlug}/${metric.key}`)
-                }}
+                onSelect={() => router.push(`/project/${projectSlug}/${metric.key}`)}
                 isActive={displayedMetric === metric}
               />
             ))}
