@@ -321,29 +321,17 @@ function GraphTooltip({ repository, tooltipData }) {
 
 function Metrics({ id, repository }) {
   const router = useRouter()
-  const { metric: queryKey } = router.query
+  const [projectSlug, metricSlug] = router.query.slug
   const { data: metrics } = useSWR('/api/metrics/' + id, fetcher)
   const [selectedMetric, setSelectedMetric] = useState()
+  const displayedMetric = selectedMetric || metrics?.[0]
 
-  let displayedMetric = selectedMetric
-
-  if (!displayedMetric) {
-    const queryMetric = metrics?.find((metric) => metric.key === queryKey)
-    const defaultMetric = metrics?.[0]
-
-    displayedMetric = queryMetric || defaultMetric
-  }
-
-  if (displayedMetric && queryKey !== displayedMetric.key) {
-    router.push(
-      {
-        pathname: router.pathname,
-        query: { ...router.query, metric: displayedMetric.key }
-      },
-      undefined,
-      { scroll: false }
-    )
-  }
+  useEffect(() => {
+    // Set the metric slug in the URL if it's not already set.
+    if (displayedMetric && !metricSlug) {
+      router.push(`/project/${projectSlug}/${displayedMetric.key}`)
+    }
+  }, [metricSlug, displayedMetric])
 
   return (
     <>
@@ -359,7 +347,10 @@ function Metrics({ id, repository }) {
               <MetricCard
                 key={metric.id}
                 metric={metric}
-                onSelect={() => setSelectedMetric(metric)}
+                onSelect={() => {
+                  setSelectedMetric(metric)
+                  router.push(`/project/${projectSlug}/${metric.key}`)
+                }}
                 isActive={displayedMetric === metric}
               />
             ))}
@@ -373,8 +364,8 @@ function Metrics({ id, repository }) {
 
 function ProjectMetrics() {
   const router = useRouter()
-  const { project_slug } = router.query
-  const { data: project } = useSWR('/api/project/' + project_slug, fetcher)
+  const [projectSlug] = router.query.slug
+  const { data: project } = useSWR('/api/project/' + projectSlug, fetcher)
 
   if (!project) {
     return null
