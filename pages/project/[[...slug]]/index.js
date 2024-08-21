@@ -347,7 +347,7 @@ function Metrics({ id, repository }) {
               <MetricCard
                 key={metric.id}
                 metric={metric}
-                onSelect={() => router.push(`/project/${projectSlug}/${metric.key}`)}
+                onSelect={() => router.push(`/project/${projectSlug}/${metric.key}`, undefined, { scroll: false })}
                 isActive={displayedMetric === metric}
               />
             ))}
