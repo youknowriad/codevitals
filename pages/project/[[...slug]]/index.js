@@ -181,12 +181,10 @@ function Metric({ metric, repository }) {
         </div>
       </div>
       <div className='p-4 m-8'>
-        {!!perf?.length && (
-          <>
-            <Line ref={chartRef} plugins={plugins} data={data} options={options} />
-            <GraphTooltip repository={repository} tooltipData={tooltipData} />
-          </>
-        )}
+        <>
+          <Line ref={chartRef} plugins={plugins} data={data} options={options} />
+          <GraphTooltip repository={repository} tooltipData={tooltipData} />
+        </>
       </div>
     </div>
   )
@@ -207,10 +205,8 @@ function MetricCard({ metric, onSelect, isActive }) {
       role='button'
       onClick={onSelect}
       className={classnames(
-        'px-4 py-5 overflow-hidden sm:p-6 pointer bg-gray-50 hover:bg-gray-100 border-b border-r border-gray-200 border-t',
-        {
-          'bg-gray-100': isActive
-        }
+        'px-4 py-5 overflow-hidden sm:p-6 pointer hover:bg-gray-100 border-b border-r border-gray-200 border-t',
+        isActive ? 'bg-gray-100' : 'bg-gray-50'
       )}
       style={{ marginBottom: -1 }}
     >
@@ -324,16 +320,26 @@ function GraphTooltip({ repository, tooltipData }) {
 }
 
 function Metrics({ id, repository }) {
+  const router = useRouter()
+  const [projectSlug, metricSlug] = router.query.slug
   const { data: metrics } = useSWR('/api/metrics/' + id, fetcher)
-  const [selectedMetric, setSelectedMetric] = useState()
-  const displayedMetric = selectedMetric || metrics?.[0]
+  const metricFromParam = metrics?.find((metric) => metric.key === metricSlug)
+  const displayedMetric = metricFromParam || metrics?.[0]
+
+  useEffect(() => {
+    // Set the metric slug in the URL if it's not already set.
+    if (displayedMetric && !metricSlug) {
+      router.push(`/project/${projectSlug}/${displayedMetric.key}`)
+    }
+  }, [metricSlug, displayedMetric])
+
   return (
     <>
       <ZoomPlugin />
       <Layout>
         {!metrics && <div className='w-full h-full flex flex-col items-center justify-center text-lg'>Loading...</div>}
         {metrics && !metrics.length && (
-          <div className='w-full flex flex-col items-center justify-center text-lg'>No data available.</div>
+          <div className='w-full h-full flex flex-col items-center justify-center text-lg'>No data available.</div>
         )}
         {!!metrics?.length && (
           <dl className='grid grid-cols-1 sm:grid-cols-5 bg-gray-50 border-b border-gray-200'>
@@ -341,7 +347,7 @@ function Metrics({ id, repository }) {
               <MetricCard
                 key={metric.id}
                 metric={metric}
-                onSelect={() => setSelectedMetric(metric)}
+                onSelect={() => router.push(`/project/${projectSlug}/${metric.key}`)}
                 isActive={displayedMetric === metric}
               />
             ))}
@@ -355,8 +361,8 @@ function Metrics({ id, repository }) {
 
 function ProjectMetrics() {
   const router = useRouter()
-  const { project_slug } = router.query
-  const { data: project } = useSWR('/api/project/' + project_slug, fetcher)
+  const [projectSlug] = router.query.slug
+  const { data: project } = useSWR('/api/project/' + projectSlug, fetcher)
 
   if (!project) {
     return null
