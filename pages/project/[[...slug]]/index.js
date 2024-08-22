@@ -2,7 +2,7 @@ import classnames from 'classnames'
 import useSWR from 'swr'
 import { Line } from 'react-chartjs-2'
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { ArrowSmDownIcon, ArrowSmUpIcon } from '@heroicons/react/solid'
+import { ArrowDownIcon, ArrowUpIcon } from '@heroicons/react/20/solid'
 import Layout from '../../../components/layout'
 import { Chart as ChartJS, Tooltip, registerables } from 'chart.js'
 import dynamic from 'next/dynamic'
@@ -245,7 +245,7 @@ function MetricCard({ metric, onSelect, isActive }) {
             {sentiment !== 'neutral' && (
               <>
                 {change && change > 0 ? (
-                  <ArrowSmUpIcon
+                  <ArrowUpIcon
                     className={classnames('-ml-1 mr-0.5 flex-shrink-0 self-center h-5 w-5', {
                       'text-green-500': sentiment === 'positive',
                       'text-red-500': sentiment === 'negative'
@@ -253,7 +253,7 @@ function MetricCard({ metric, onSelect, isActive }) {
                     aria-hidden='true'
                   />
                 ) : (
-                  <ArrowSmDownIcon
+                  <ArrowDownIcon
                     className={classnames('-ml-1 mr-0.5 flex-shrink-0 self-center h-5 w-5', {
                       'text-green-500': sentiment === 'positive',
                       'text-red-500': sentiment === 'negative'
