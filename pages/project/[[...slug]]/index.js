@@ -2,7 +2,9 @@ import classnames from 'classnames'
 import useSWR from 'swr'
 import { Line } from 'react-chartjs-2'
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { Listbox, ListboxButton, ListboxOption, ListboxOptions } from '@headlessui/react'
 import { ArrowDownIcon, ArrowUpIcon } from '@heroicons/react/20/solid'
+import { CheckIcon } from '@heroicons/react/20/solid'
 import Layout from '../../../components/layout'
 import { Chart as ChartJS, Tooltip, registerables } from 'chart.js'
 import dynamic from 'next/dynamic'
@@ -323,8 +325,11 @@ function Metrics({ id, repository }) {
   const router = useRouter()
   const [projectSlug, metricSlug] = router.query.slug
   const { data: metrics } = useSWR('/api/metrics/' + id, fetcher)
+  const defaultMetrics = metrics?.filter((metric) => metric.default_visible !== 0)
   const metricFromParam = metrics?.find((metric) => metric.key === metricSlug)
   const displayedMetric = metricFromParam || metrics?.[0]
+
+  const [selectedMetrics, setSelectedMetrics] = useState(defaultMetrics)
 
   useEffect(() => {
     // Set the metric slug in the URL if it's not already set.
@@ -332,6 +337,8 @@ function Metrics({ id, repository }) {
       router.push(`/project/${projectSlug}/${displayedMetric.key}`)
     }
   }, [metricSlug, displayedMetric])
+
+  const _selectedMetrics = selectedMetrics || defaultMetrics
 
   return (
     <>
@@ -342,16 +349,37 @@ function Metrics({ id, repository }) {
           <div className='w-full h-full flex flex-col items-center justify-center text-lg'>No data available.</div>
         )}
         {!!metrics?.length && (
-          <dl className='grid grid-cols-1 sm:grid-cols-5 bg-gray-50 border-b border-gray-200'>
-            {metrics.map((metric) => (
-              <MetricCard
-                key={metric.id}
-                metric={metric}
-                onSelect={() => router.push(`/project/${projectSlug}/${metric.key}`, undefined, { scroll: false })}
-                isActive={displayedMetric === metric}
-              />
-            ))}
-          </dl>
+          <>
+            <div className='grid grid-cols-1 sm:grid-cols-5 bg-gray-50 border-b border-gray-200 py-2 px-0'>
+              <Listbox value={_selectedMetrics} onChange={setSelectedMetrics} multiple>
+                <ListboxButton className='ml-6 inline-flex items-center gap-x-1.5 rounded-md px-2 py-2 text-sm bg-wordpress text-white font-normal shadow-sm ring-0 ring-inset ring-gray-300 hover:bg-opacity-70 transition-all'>
+                  Visible Metrics
+                </ListboxButton>
+                <ListboxOptions anchor='bottom'>
+                  {metrics.map((metric) => (
+                    <ListboxOption
+                      key={metric.id}
+                      value={metric}
+                      className='group flex gap-2 p-1 bg-wordpress text-white border data-[hover]:shadow data-[focus]:bg-opacity-70'
+                    >
+                      <CheckIcon className='invisible size-5 group-data-[selected]:visible' />
+                      {metric.name}
+                    </ListboxOption>
+                  ))}
+                </ListboxOptions>
+              </Listbox>
+            </div>
+            <dl className='grid grid-cols-1 sm:grid-cols-5 bg-gray-50 border-b border-gray-200'>
+              {(selectedMetrics || defaultMetrics).map((metric) => (
+                <MetricCard
+                  key={metric.id}
+                  metric={metric}
+                  onSelect={() => router.push(`/project/${projectSlug}/${metric.key}`, undefined, { scroll: false })}
+                  isActive={displayedMetric === metric}
+                />
+              ))}
+            </dl>
+          </>
         )}
         {displayedMetric && <Metric metric={displayedMetric} repository={repository} />}
       </Layout>
