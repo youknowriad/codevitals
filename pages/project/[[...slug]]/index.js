@@ -327,9 +327,10 @@ function Metrics({ id, repository }) {
   const { data: metrics } = useSWR('/api/metrics/' + id, fetcher)
   const defaultMetrics = metrics?.filter((metric) => metric.default_visible !== 0)
   const metricFromParam = metrics?.find((metric) => metric.key === metricSlug)
-  const displayedMetric = metricFromParam || metrics?.[0]
-
   const [selectedMetrics, setSelectedMetrics] = useState(defaultMetrics)
+
+  const _selectedMetrics = selectedMetrics || defaultMetrics
+  const displayedMetric = metricFromParam || _selectedMetrics?.[0]
 
   useEffect(() => {
     // Set the metric slug in the URL if it's not already set.
@@ -338,7 +339,6 @@ function Metrics({ id, repository }) {
     }
   }, [metricSlug, displayedMetric])
 
-  const _selectedMetrics = selectedMetrics || defaultMetrics
 
   return (
     <>
