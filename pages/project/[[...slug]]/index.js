@@ -339,7 +339,6 @@ function Metrics({ id, repository }) {
     }
   }, [metricSlug, displayedMetric])
 
-
   return (
     <>
       <ZoomPlugin />
