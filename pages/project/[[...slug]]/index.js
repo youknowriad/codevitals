@@ -350,17 +350,23 @@ function Metrics({ id, repository }) {
         )}
         {!!metrics?.length && (
           <>
-            <div className='grid grid-cols-1 sm:grid-cols-5 bg-gray-50 border-b border-gray-200 py-2 px-0'>
+            <dl className='grid grid-cols-1 sm:grid-cols-5 bg-gray-50 border-b border-gray-200'>
               <Listbox value={_selectedMetrics} onChange={setSelectedMetrics} multiple>
-                <ListboxButton className='ml-6 inline-flex items-center gap-x-1.5 rounded-md px-2 py-2 text-sm bg-wordpress text-white font-normal shadow-sm ring-0 ring-inset ring-gray-300 hover:bg-opacity-70 transition-all'>
-                  Visible Metrics
+                <ListboxButton
+                  className='px-4 py-5 overflow-hidden sm:p-6 pointer hover:bg-blue-200 border-b border-r border-gray-200 border-t bg-blue-100'
+                  style={{ marginBottom: -1 }}
+                >
+                  Visible Metrics <strong>({(selectedMetrics || defaultMetrics).length})</strong>
                 </ListboxButton>
-                <ListboxOptions anchor='bottom'>
+                <ListboxOptions
+                  anchor='bottom start'
+                  className='absolute right-0 z-10 w-80 h-80 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in'
+                >
                   {metrics.map((metric) => (
                     <ListboxOption
                       key={metric.id}
                       value={metric}
-                      className='group flex gap-2 p-1 bg-wordpress text-white border data-[hover]:shadow data-[focus]:bg-opacity-70'
+                      className='group flex gap-2 px-4 py-2 text-sm text-gray-700 data-[focus]:bg-gray-100 data-[focus]:text-gray-900'
                     >
                       <CheckIcon className='invisible size-5 group-data-[selected]:visible' />
                       {metric.name}
@@ -368,8 +374,6 @@ function Metrics({ id, repository }) {
                   ))}
                 </ListboxOptions>
               </Listbox>
-            </div>
-            <dl className='grid grid-cols-1 sm:grid-cols-5 bg-gray-50 border-b border-gray-200'>
               {(selectedMetrics || defaultMetrics).map((metric) => (
                 <MetricCard
                   key={metric.id}
