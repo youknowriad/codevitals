@@ -300,12 +300,7 @@ function GraphTooltip({ repository, tooltipData }) {
       >
         <div style={{ color: '#fff', fontSize: '12px' }}>
           {tooltipData.titleLines.map((title, i) => (
-            <a
-              key={i}
-              href={`https://github.com/${repository}/commit/${title}`}
-              target='blank'
-              style={{ display: 'inline-block' }}
-            >
+            <a key={i} href={`${repository}/commit/${title}`} target='blank' style={{ display: 'inline-block' }}>
               {title.slice(0, 7)}
             </a>
           ))}
