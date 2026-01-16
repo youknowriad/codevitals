@@ -230,7 +230,10 @@ function MetricCard({ metric, onSelect, isActive }) {
       {data && (
         <dd className='mt-1 flex justify-between items-baseline md:block lg:flex'>
           {data?.average && (
-            <div className='flex items-baseline text-2xl font-semibold text-wordpress'>
+            <div
+              className='flex items-baseline text-2xl font-semibold text-wordpress cursor-help'
+              title='Average of last 20 commits (normalized value for historical consistency)'
+            >
               {formatNumber(data.average)}
             </div>
           )}
@@ -241,8 +244,9 @@ function MetricCard({ metric, onSelect, isActive }) {
                 'bg-green-100 text-green-800': sentiment === 'positive',
                 'bg-red-100 text-red-800': sentiment === 'negative'
               },
-              'inline-flex items-baseline px-2.5 py-0.5 rounded-full text-sm font-medium md:mt-2 lg:mt-0'
+              'inline-flex items-baseline px-2.5 py-0.5 rounded-full text-sm font-medium md:mt-2 lg:mt-0 cursor-help'
             )}
+            title='Change compared to previous 20 commits'
           >
             {sentiment !== 'neutral' && (
               <>
