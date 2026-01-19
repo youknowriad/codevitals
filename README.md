@@ -1,4 +1,3 @@
-
 # CodeVitals
 
 Follow the performance metrics of your codebase.

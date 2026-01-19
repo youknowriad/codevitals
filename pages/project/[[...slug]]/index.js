@@ -9,6 +9,7 @@ import Layout from '../../../components/layout'
 import { Chart as ChartJS, Tooltip, registerables } from 'chart.js'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/router'
+import { format } from 'date-fns'
 
 ChartJS.register(...registerables)
 
@@ -101,29 +102,41 @@ function Metric({ metric, repository }) {
       setChartIsZoomed(false)
     }
   }, [metric, limit])
-  const customTooltip = useCallback((context) => {
-    const { chart, tooltip } = context
-    if (tooltip.opacity === 0) {
-      setTooltipData({ isVisible: false })
-      return
-    }
+  const customTooltip = useCallback(
+    (context) => {
+      const { chart, tooltip } = context
+      if (tooltip.opacity === 0) {
+        setTooltipData({ isVisible: false })
+        return
+      }
 
-    const { offsetLeft, offsetTop } = chart.canvas
+      const { offsetLeft, offsetTop } = chart.canvas
+      const dataIndex = tooltip.dataPoints?.[0]?.dataIndex
+      const hash = perf?.[dataIndex]?.hash
 
-    setTooltipData({
-      isVisible: true,
-      left: offsetLeft + tooltip.caretX,
-      top: offsetTop + tooltip.caretY,
-      titleLines: tooltip.title || [],
-      bodyLines: tooltip.body.map(({ lines }) => lines)
-    })
-  }, [])
+      setTooltipData({
+        isVisible: true,
+        left: offsetLeft + tooltip.caretX,
+        top: offsetTop + tooltip.caretY,
+        titleLines: tooltip.title || [],
+        bodyLines: tooltip.body.map(({ lines }) => lines),
+        hash: hash
+      })
+    },
+    [perf]
+  )
   const options = useMemo(
     () => ({
       responsive: true,
       scales: {
         x: {
-          display: false
+          display: true,
+          ticks: {
+            maxRotation: 45,
+            minRotation: 45,
+            autoSkip: true,
+            maxTicksLimit: 10
+          }
         },
         y: {
           min: 0
@@ -156,7 +169,7 @@ function Metric({ metric, repository }) {
   )
   const data = useMemo(
     () => ({
-      labels: perf?.map((p) => p.hash),
+      labels: perf?.map((p) => format(new Date(p.measured_at), 'MMM d, yyyy HH:mm')),
       datasets: [
         {
           label: metric.name,
@@ -303,10 +316,20 @@ function GraphTooltip({ repository, tooltipData }) {
         }}
       >
         <div style={{ color: '#fff', fontSize: '12px' }}>
-          {tooltipData.titleLines.map((title, i) => (
-            <a key={i} href={`${repository}/commit/${title}`} target='blank' style={{ display: 'inline-block' }}>
-              {title.slice(0, 7)}
+          {tooltipData.hash && (
+            <a
+              key='hash'
+              href={`${repository}/commit/${tooltipData.hash}`}
+              target='blank'
+              style={{ display: 'block', marginBottom: '4px' }}
+            >
+              {tooltipData.hash.slice(0, 7)}
             </a>
+          )}
+          {tooltipData.titleLines.map((title, i) => (
+            <div key={i} style={{ marginBottom: '2px' }}>
+              {title}
+            </div>
           ))}
           {tooltipData.bodyLines.map((line, i) => (
             <div className='flex items-center' key={i}>
