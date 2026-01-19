@@ -102,26 +102,29 @@ function Metric({ metric, repository }) {
       setChartIsZoomed(false)
     }
   }, [metric, limit])
-  const customTooltip = useCallback((context) => {
-    const { chart, tooltip } = context
-    if (tooltip.opacity === 0) {
-      setTooltipData({ isVisible: false })
-      return
-    }
+  const customTooltip = useCallback(
+    (context) => {
+      const { chart, tooltip } = context
+      if (tooltip.opacity === 0) {
+        setTooltipData({ isVisible: false })
+        return
+      }
 
-    const { offsetLeft, offsetTop } = chart.canvas
-    const dataIndex = tooltip.dataPoints?.[0]?.dataIndex
-    const hash = perf?.[dataIndex]?.hash
+      const { offsetLeft, offsetTop } = chart.canvas
+      const dataIndex = tooltip.dataPoints?.[0]?.dataIndex
+      const hash = perf?.[dataIndex]?.hash
 
-    setTooltipData({
-      isVisible: true,
-      left: offsetLeft + tooltip.caretX,
-      top: offsetTop + tooltip.caretY,
-      titleLines: tooltip.title || [],
-      bodyLines: tooltip.body.map(({ lines }) => lines),
-      hash: hash
-    })
-  }, [perf])
+      setTooltipData({
+        isVisible: true,
+        left: offsetLeft + tooltip.caretX,
+        top: offsetTop + tooltip.caretY,
+        titleLines: tooltip.title || [],
+        bodyLines: tooltip.body.map(({ lines }) => lines),
+        hash: hash
+      })
+    },
+    [perf]
+  )
   const options = useMemo(
     () => ({
       responsive: true,
